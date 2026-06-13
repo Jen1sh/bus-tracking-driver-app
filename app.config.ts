@@ -60,6 +60,20 @@ export default (context: ConfigContext): ExpoConfig => ({
         launchMode: 'most-recent',
       },
     ],
+    [
+      'react-native-maps',
+      {
+        androidGoogleMapsApiKey: 'AIzaSyAoaQQo33ZKfIIqh_hKBINhvnXoG0tva3s',
+      },
+    ],
+    [
+      'expo-location',
+      {
+        locationAlwaysAndWhenInUsePermission: 'Allow $(PRODUCT_NAME) to use your location.',
+        isIosBackgroundLocationEnabled: true,
+        isAndroidBackgroundLocationEnabled: true,
+      },
+    ],
   ],
   experiments: {
     typedRoutes: true,

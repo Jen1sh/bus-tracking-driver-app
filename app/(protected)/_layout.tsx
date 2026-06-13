@@ -1,6 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Tabs } from 'expo-router';
-import React from 'react';
 import { useUnistyles } from 'react-native-unistyles';
 
 const ProtectedLayout = () => {
@@ -22,6 +21,7 @@ const ProtectedLayout = () => {
           },
         }}
       />
+
       <Tabs.Screen
         name='profile'
         options={{
@@ -37,6 +37,7 @@ const ProtectedLayout = () => {
           },
         }}
       />
+      <Tabs.Screen name='(stack)' options={{ href: null }} />
     </Tabs>
   );
 };

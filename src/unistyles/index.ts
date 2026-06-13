@@ -26,6 +26,7 @@ export const darkTheme = {
     // Text colors
     text: '#f9f9f9',
     placeholderText: '#9e9e9e',
+    surface: '#424242',
   },
 };
 

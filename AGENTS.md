@@ -60,6 +60,17 @@ All `@/` aliases are defined in `tsconfig.json` paths:
 - `expo-dev-client` configured with `launchMode: 'most-recent'`
 - Splash config in `app.config.ts`, not a separate plugin call
 
+## Styling rules
+
+- **No static colors/spacing values** in stylesheets. Always reference theme tokens from `src/unistyles/tokens.ts` (colors, spacings, fonts). If a needed token doesn't exist, ask the user.
+- **Reusable components needing theme access** → `withUnistyles` HOC from `react-native-unistyles`.
+- **Screens** → `StyleSheet.create(({ colors, spacings }) => ({...}))` callback pattern. `useUnistyles` is acceptable for runtime theme reads on screens.
+
+## Component patterns
+
+- **Modular components**: Extract significant chunks of UI + logic into dedicated component files (bottom sheets, tab content, list items, etc.) to keep screens lean and components reusable.
+- **Feature grouping**: Co-locate related components under a feature directory (e.g. `src/components/map/`).
+
 ## Skills
 
 `.agents/skills/` contains technique references for Expo workflows (deployment, dev-client, API routes, modules, brownfield, App Clip, Tailwind, SwiftUI/Jetpack Compose UI, data fetching, upgrade insights). Also listed in `skills-lock.json`. Load via the skill tool prefix when a task matches.

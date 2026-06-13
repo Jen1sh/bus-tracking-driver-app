@@ -9,6 +9,7 @@ import { ThemeProvider } from 'expo-router/react-navigation';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -38,17 +39,19 @@ export default function RootLayout() {
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <SafeAreaProvider>
-        <KeyboardProvider>
-          <AuthProvider>
-            <StatusBar style='auto' />
-            <RootLayoutNav />
-            <StyledToastManager />
-          </AuthProvider>
-        </KeyboardProvider>
-      </SafeAreaProvider>
-    </QueryClientProvider>
+    <GestureHandlerRootView>
+      <QueryClientProvider client={queryClient}>
+        <SafeAreaProvider>
+          <KeyboardProvider>
+            <AuthProvider>
+              <StatusBar style='auto' />
+              <RootLayoutNav />
+              <StyledToastManager />
+            </AuthProvider>
+          </KeyboardProvider>
+        </SafeAreaProvider>
+      </QueryClientProvider>
+    </GestureHandlerRootView>
   );
 }
 
