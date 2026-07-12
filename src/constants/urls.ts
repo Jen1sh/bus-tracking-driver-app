@@ -1,3 +1,13 @@
 export const Urls = {
-  login: '/auth/login',
+  auth: {
+    login: 'auth/login',
+    refreshToken: 'auth/refresh',
+  },
+  trip: {
+    startTrip: 'trips/start',
+    endTrip: 'trips/end',
+  },
+  location: {
+    updateLocation: 'location/update',
+  },
 };

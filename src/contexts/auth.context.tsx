@@ -1,7 +1,15 @@
 import { StorageKeys } from '@/constants/storage-keys';
 import { SecureStore } from '@/lib/secure-store';
+import { setLogoutCallback } from '@/lib/axios';
 import { useQueryClient } from '@tanstack/react-query';
-import { createContext, PropsWithChildren, useContext, useEffect, useState } from 'react';
+import {
+  useCallback,
+  createContext,
+  PropsWithChildren,
+  useContext,
+  useEffect,
+  useState,
+} from 'react';
 import { useGlobalStore } from '../store';
 
 // Define the type for the context value
@@ -24,22 +32,29 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
   const { resetStore } = useGlobalStore();
   const [token, setToken] = useState<string | null>(null);
 
-  useEffect(() => {
-    const token = SecureStore.getItem(StorageKeys.TOKEN);
-    if (token) setToken(token);
-  }, []);
-
   const storeToken = (token: string) => {
     setToken(token);
     SecureStore.setItem(StorageKeys.TOKEN, token);
   };
 
-  const logOut = async () => {
+  const logOut = useCallback(async () => {
     resetStore();
     queryClient.clear();
     await SecureStore.deleteItemAsync(StorageKeys.TOKEN);
+    await SecureStore.deleteItemAsync(StorageKeys.REFRESH_TOKEN);
     setToken(null);
-  };
+  }, [resetStore, queryClient]);
+
+  useEffect(() => {
+    const token = SecureStore.getItem(StorageKeys.TOKEN);
+    if (token) setToken(token);
+
+    setLogoutCallback(logOut);
+
+    return () => {
+      setLogoutCallback(() => {});
+    };
+  }, [logOut]);
 
   return (
     <AuthContext.Provider

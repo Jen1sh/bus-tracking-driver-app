@@ -71,6 +71,13 @@ All `@/` aliases are defined in `tsconfig.json` paths:
 - **Modular components**: Extract significant chunks of UI + logic into dedicated component files (bottom sheets, tab content, list items, etc.) to keep screens lean and components reusable.
 - **Feature grouping**: Co-locate related components under a feature directory (e.g. `src/components/map/`).
 
+## Coding patterns
+
+- **API mutations**: Created via nested hooks inside a parent hook, following the `useAuth`/`useTrip` pattern. Parent hook returns named mutation hooks (e.g. `useLogin`, `useStartTrip`), not raw `useMutation` return values. Screens destructure and call them: `const { useLogin } = useAuth(); const { mutate, isPending } = useLogin();`. `onSuccess`/`onError` callbacks live inside the mutation hook definition.
+- **Error handling**: Shared `getErrorMessage()` in `src/lib/error.ts` for consistent error messages across hooks. Use `Alert.alert` for user-facing errors.
+- **Hook files**: kebab-case filenames (e.g. `use-auth.ts`, `use-trip.ts`, `use-location-tracking.ts`).
+- **Service layer**: API call functions in `src/services/*.service.ts` using the axios client. Mutations in hooks wrap these services.
+
 ## Skills
 
 `.agents/skills/` contains technique references for Expo workflows (deployment, dev-client, API routes, modules, brownfield, App Clip, Tailwind, SwiftUI/Jetpack Compose UI, data fetching, upgrade insights). Also listed in `skills-lock.json`. Load via the skill tool prefix when a task matches.

@@ -2,6 +2,7 @@ import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import { useEffect, useState } from 'react';
 import { Alert, Linking } from 'react-native';
+import { postLocation } from '../services/trip.service';
 
 const TASK_NAME = 'LOCATION_TRACKING_TASK';
 
@@ -10,19 +11,35 @@ TaskManager.defineTask(TASK_NAME, async ({ data, error }) => {
     console.error('Location tracking error:', error);
     return;
   }
+
   if (data) {
     const { locations } = data as { locations: Location.LocationObject[] };
-    console.log('Location update:', locations);
+
+    for (const loc of locations) {
+      try {
+        await postLocation({
+          busId: 1,
+          tripId: 5,
+          latitude: loc.coords.latitude,
+          longitude: loc.coords.longitude,
+          speed: 2,
+        });
+      } catch (err) {
+        console.error('Failed to post location:', err?.response?.data);
+      }
+    }
   }
 });
 
-async function requestPermissions() {
+export async function requestPermissions() {
   const foreground = await Location.requestForegroundPermissionsAsync();
+
   if (foreground.status !== 'granted') {
     return false;
   }
 
   const background = await Location.requestBackgroundPermissionsAsync();
+
   if (background.status !== 'granted') {
     return false;
   }
@@ -30,7 +47,7 @@ async function requestPermissions() {
   return true;
 }
 
-function showPermissionAlert() {
+export function showPermissionAlert() {
   Alert.alert(
     'Location Permission Required',
     'Please enable location access in Settings to start trip tracking.',
@@ -48,11 +65,13 @@ export function useLocationTracking() {
     TaskManager.isTaskRegisteredAsync(TASK_NAME).then(setIsTracking);
   }, []);
 
-  const startTracking = async () => {
+  const startTracking = async (skipPermissionCheck = false) => {
     const granted = await requestPermissions();
+
     if (!granted) {
       showPermissionAlert();
-      return;
+
+      return false;
     }
 
     await Location.startLocationUpdatesAsync(TASK_NAME, {
@@ -67,6 +86,8 @@ export function useLocationTracking() {
     });
 
     setIsTracking(true);
+
+    return true;
   };
 
   const stopTracking = async () => {

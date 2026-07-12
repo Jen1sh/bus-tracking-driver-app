@@ -2,19 +2,22 @@ import { Images } from '@/assets/images';
 import { StyledButton } from '@/components/styled/StyledButton';
 import { StyledText } from '@/components/styled/StyledText';
 import { StyledTextInput } from '@/components/styled/StyledTextInput';
-import { useAuthContext } from '@/contexts/auth.context';
+import useAuth from '@/hooks/use-auth';
 import React, { useState } from 'react';
 import { Image, View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { StyleSheet } from 'react-native-unistyles';
 
 const SignIn = () => {
-  const { storeToken } = useAuthContext();
+  const { useLogin } = useAuth();
+  const { mutate, isPending } = useLogin();
 
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [passwordShown, setPasswordShown] = useState(false);
 
-  const login = () => {
-    storeToken('my-token');
+  const handleLogin = () => {
+    mutate({ email, password });
   };
 
   return (
@@ -38,6 +41,8 @@ const SignIn = () => {
           autoCorrect={false}
           placeholder='Username'
           leftIcon='account-alert-outline'
+          value={email}
+          onChangeText={setEmail}
         />
         <StyledTextInput
           autoComplete='off'
@@ -48,8 +53,15 @@ const SignIn = () => {
           secureTextEntry={!passwordShown}
           onRightIconPress={() => setPasswordShown(ps => !ps)}
           rightIcon={passwordShown ? 'eye-off-outline' : 'eye-outline'}
+          value={password}
+          onChangeText={setPassword}
         />
-        <StyledButton icon='log-in-outline' title='Log in' onPress={login} />
+        <StyledButton
+          icon='log-in-outline'
+          title='Log in'
+          onPress={handleLogin}
+          loading={isPending}
+        />
       </View>
     </KeyboardAwareScrollView>
   );
