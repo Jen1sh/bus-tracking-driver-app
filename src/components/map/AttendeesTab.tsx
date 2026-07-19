@@ -1,26 +1,20 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { StyledText } from '@/components/styled/StyledText';
+import type { StudentInfo } from '@/types/api/responses.interface';
 import { FlatList, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
-const DUMMY_ATTENDEES = [
-  { id: '1', name: 'John Doe', status: 'present' as const },
-  { id: '2', name: 'Jane Smith', status: 'present' as const },
-  { id: '3', name: 'Bob Johnson', status: 'absent' as const },
-  { id: '4', name: 'Alice Williams', status: 'present' as const },
-  { id: '5', name: 'Charlie Brown', status: 'absent' as const },
-  { id: '6', name: 'Diana Prince', status: 'present' as const },
-  { id: '7', name: 'Edward Norton', status: 'present' as const },
-  { id: '8', name: 'Fiona Apple', status: 'absent' as const },
-];
+type AttendeesTabProps = {
+  students: StudentInfo[];
+};
 
-const AttendeesTab = () => {
+const AttendeesTab = ({ students }: AttendeesTabProps) => {
   return (
     <View style={styles.container}>
-      <StyledText style={styles.heading}>Attendees ({DUMMY_ATTENDEES.length})</StyledText>
+      <StyledText style={styles.heading}>Attendees ({students.length})</StyledText>
       <FlatList
-        data={DUMMY_ATTENDEES}
-        keyExtractor={item => item.id}
+        data={students}
+        keyExtractor={item => String(item.id)}
         scrollEnabled={false}
         contentContainerStyle={styles.list}
         renderItem={({ item }) => (
@@ -29,19 +23,6 @@ const AttendeesTab = () => {
               <Ionicons name='person-outline' size={18} color={styles.avatarIcon.color} />
             </View>
             <StyledText style={styles.name}>{item.name}</StyledText>
-            <View
-              style={[
-                styles.badge,
-                item.status === 'present' ? styles.badgePresent : styles.badgeAbsent,
-              ]}>
-              <StyledText
-                style={[
-                  styles.badgeText,
-                  item.status === 'present' ? styles.badgeTextPresent : styles.badgeTextAbsent,
-                ]}>
-                {item.status === 'present' ? 'Present' : 'Absent'}
-              </StyledText>
-            </View>
           </View>
         )}
       />
@@ -86,27 +67,6 @@ const styles = StyleSheet.create(({ colors, spacings }) => ({
     fontSize: 15,
     fontFamily: 'RubikMedium',
     color: colors.text,
-  },
-  badge: {
-    paddingHorizontal: spacings.sm,
-    paddingVertical: spacings.xs,
-    borderRadius: 12,
-  },
-  badgePresent: {
-    backgroundColor: colors.success,
-  },
-  badgeAbsent: {
-    backgroundColor: colors.disabled,
-  },
-  badgeText: {
-    fontSize: 12,
-    fontFamily: 'RubikMedium',
-  },
-  badgeTextPresent: {
-    color: colors.light,
-  },
-  badgeTextAbsent: {
-    color: colors.placeholderText,
   },
 }));
 

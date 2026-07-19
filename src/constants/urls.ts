@@ -10,4 +10,8 @@ export const Urls = {
   location: {
     updateLocation: 'location/update',
   },
+  driver: {
+    nextScheduleSummary: 'driver/next-schedule-summary',
+    nextScheduleAttendees: 'driver/next-schedule-attendees',
+  },
 };

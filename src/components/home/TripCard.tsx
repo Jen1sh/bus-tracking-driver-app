@@ -1,4 +1,5 @@
 import { StyledButton } from '@/components/styled/StyledButton';
+import { TripStatus } from '@/types/enums';
 import { useRouter } from 'expo-router';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
@@ -7,21 +8,54 @@ import RouteTimeline from './RouteTimeline';
 import TripControls from './TripControls';
 import TripHeader from './TripHeader';
 
-const TRIP_STOPS = [
-  { name: 'Main Street Station', address: '123 Main St' },
-  { name: 'Downtown Terminal', address: '456 Oak Ave' },
-];
+export type TripCardProps = {
+  busNumber: string;
+  scheduledTime: string;
+  date: string;
+  attendeeCount: number;
+  tripStatus: TripStatus;
+  isStartLoading?: boolean;
+  isEndLoading?: boolean;
+  onStartTrip: () => void;
+  onEndTrip: () => void;
+};
 
-const TripCard = () => {
+const TripCard = ({
+  busNumber,
+  scheduledTime,
+  date,
+  attendeeCount,
+  tripStatus,
+  isStartLoading,
+  isEndLoading,
+  onStartTrip,
+  onEndTrip,
+}: TripCardProps) => {
   const router = useRouter();
 
   return (
     <View style={styles.card}>
-      <TripHeader busNumber='BUS-101' scheduledTime='8:30 AM' label='NEXT SCHEDULE' />
+      <TripHeader
+        busNumber={busNumber}
+        scheduledTime={scheduledTime}
+        date={date}
+        label='NEXT SCHEDULE'
+      />
 
-      <RouteTimeline stops={TRIP_STOPS} />
+      <RouteTimeline
+        stops={[
+          { name: 'Pickup', address: '' },
+          { name: 'School', address: '' },
+        ]}
+      />
 
-      <TripControls attendeeCount={8} />
+      <TripControls
+        attendeeCount={attendeeCount}
+        tripStatus={tripStatus}
+        onStartTrip={onStartTrip}
+        onEndTrip={onEndTrip}
+        isLoading={isStartLoading || isEndLoading}
+      />
 
       <EmergencyButton />
 

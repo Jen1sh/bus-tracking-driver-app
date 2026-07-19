@@ -5,10 +5,11 @@ import { StyleSheet } from 'react-native-unistyles';
 type TripHeaderProps = {
   busNumber: string;
   scheduledTime: string;
+  date: string;
   label: string;
 };
 
-const TripHeader = ({ busNumber, scheduledTime, label }: TripHeaderProps) => {
+const TripHeader = ({ busNumber, scheduledTime, date, label }: TripHeaderProps) => {
   return (
     <View style={styles.container}>
       <View style={styles.topRow}>
@@ -20,6 +21,9 @@ const TripHeader = ({ busNumber, scheduledTime, label }: TripHeaderProps) => {
         </View>
       </View>
       <StyledText style={styles.time}>{scheduledTime}</StyledText>
+      <StyledText variant='caption' style={styles.date}>
+        {date}
+      </StyledText>
     </View>
   );
 };
@@ -51,6 +55,9 @@ const styles = StyleSheet.create(({ colors, spacings }) => ({
     fontSize: 32,
     fontFamily: 'RubikBold',
     color: colors.primary,
+  },
+  date: {
+    color: colors.placeholderText,
   },
 }));
 

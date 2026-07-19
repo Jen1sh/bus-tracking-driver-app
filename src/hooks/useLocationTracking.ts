@@ -1,6 +1,5 @@
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
-import { useEffect, useState } from 'react';
 import { Alert, Linking } from 'react-native';
 import { postLocation } from '../services/trip.service';
 
@@ -15,11 +14,11 @@ TaskManager.defineTask(TASK_NAME, async ({ data, error }) => {
   if (data) {
     const { locations } = data as { locations: Location.LocationObject[] };
 
+    console.log(locations);
+
     for (const loc of locations) {
       try {
         await postLocation({
-          busId: 1,
-          tripId: 5,
           latitude: loc.coords.latitude,
           longitude: loc.coords.longitude,
           speed: 2,
@@ -59,12 +58,6 @@ export function showPermissionAlert() {
 }
 
 export function useLocationTracking() {
-  const [isTracking, setIsTracking] = useState(false);
-
-  useEffect(() => {
-    TaskManager.isTaskRegisteredAsync(TASK_NAME).then(setIsTracking);
-  }, []);
-
   const startTracking = async (skipPermissionCheck = false) => {
     const granted = await requestPermissions();
 
@@ -85,15 +78,12 @@ export function useLocationTracking() {
       },
     });
 
-    setIsTracking(true);
-
     return true;
   };
 
   const stopTracking = async () => {
     await Location.stopLocationUpdatesAsync(TASK_NAME);
-    setIsTracking(false);
   };
 
-  return { isTracking, startTracking, stopTracking };
+  return { startTracking, stopTracking };
 }

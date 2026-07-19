@@ -1,11 +1,39 @@
 import { StyledButton } from '@/components/styled/StyledButton';
 import { StyledText } from '@/components/styled/StyledText';
-import { useLocationTracking } from '@/hooks/useLocationTracking';
+import { TripStatus } from '@/types/enums';
+import type { NextScheduleSummaryResponse } from '@/types/api/responses.interface';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
-const TripTab = () => {
-  const { isTracking, startTracking, stopTracking } = useLocationTracking();
+type TripTabProps = {
+  summary: NextScheduleSummaryResponse;
+  isStartLoading?: boolean;
+  isEndLoading?: boolean;
+  onStartTrip: () => void;
+  onEndTrip: () => void;
+};
+
+const TripTab = ({
+  summary,
+  isStartLoading,
+  isEndLoading,
+  onStartTrip,
+  onEndTrip,
+}: TripTabProps) => {
+  const { trip, bus } = summary;
+
+  const startTime = trip.startTime
+    ? new Date(trip.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : '--:--';
+
+  const tripDate = trip.date
+    ? new Date(trip.date).toLocaleDateString([], {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      })
+    : '';
 
   return (
     <View style={styles.container}>
@@ -13,36 +41,23 @@ const TripTab = () => {
         NEXT SCHEDULE
       </StyledText>
 
-      <StyledText style={styles.timeRange}>8:30 AM - 10:30 AM</StyledText>
+      <StyledText style={styles.timeRange}>{startTime}</StyledText>
 
-      <View style={styles.routeRow}>
-        <View style={styles.timeline}>
-          <View style={styles.dot} />
-          <View style={styles.line} />
-          <View style={styles.dot} />
-        </View>
-        <View style={styles.locations}>
-          <View style={styles.locationItem}>
-            <StyledText style={styles.locationName}>Main Street Station</StyledText>
-            <StyledText variant='caption' style={styles.locationAddress}>
-              123 Main St
-            </StyledText>
-          </View>
-          <View style={styles.locationItem}>
-            <StyledText style={styles.locationName}>Downtown Terminal</StyledText>
-            <StyledText variant='caption' style={styles.locationAddress}>
-              456 Oak Ave
-            </StyledText>
-          </View>
-        </View>
-      </View>
+      <StyledText variant='caption' style={styles.date}>
+        {tripDate}
+      </StyledText>
 
-      <StyledButton
-        title={isTracking ? 'Stop Trip' : 'Start Trip'}
-        variant={isTracking ? 'secondary' : 'primary'}
-        icon={isTracking ? 'stop-circle-outline' : 'play-circle-outline'}
-        onPress={isTracking ? stopTracking : startTracking}
-      />
+      <StyledText style={styles.busInfo}>Bus: {bus.plate}</StyledText>
+
+      {trip.status !== TripStatus.COMPLETED && (
+        <StyledButton
+          title={trip.status === TripStatus.ACTIVE ? 'Stop Trip' : 'Start Trip'}
+          variant={trip.status === TripStatus.ACTIVE ? 'secondary' : 'primary'}
+          icon={trip.status === TripStatus.ACTIVE ? 'stop-circle-outline' : 'play-circle-outline'}
+          onPress={trip.status === TripStatus.ACTIVE ? onEndTrip : onStartTrip}
+          loading={isStartLoading || isEndLoading}
+        />
+      )}
     </View>
   );
 };
@@ -60,39 +75,12 @@ const styles = StyleSheet.create(({ colors, spacings }) => ({
     fontFamily: 'RubikSemiBold',
     color: colors.primary,
   },
-  routeRow: {
-    flexDirection: 'row',
-    gap: spacings.md,
-  },
-  timeline: {
-    alignItems: 'center',
-    paddingVertical: spacings.xs,
-  },
-  dot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: colors.primary,
-  },
-  line: {
-    width: 2,
-    flex: 1,
-    backgroundColor: colors.primaryTint,
-  },
-  locations: {
-    flex: 1,
-    justifyContent: 'space-between',
-    paddingVertical: spacings.xs,
-  },
-  locationItem: {
-    gap: spacings.xs,
-  },
-  locationName: {
+  busInfo: {
     fontSize: 15,
     fontFamily: 'RubikMedium',
     color: colors.text,
   },
-  locationAddress: {
+  date: {
     color: colors.placeholderText,
   },
 }));

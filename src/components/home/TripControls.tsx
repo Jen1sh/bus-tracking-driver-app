@@ -1,15 +1,25 @@
 import { StyledButton } from '@/components/styled/StyledButton';
 import { StyledText } from '@/components/styled/StyledText';
-import { useLocationTracking } from '@/hooks/useLocationTracking';
+import { TripStatus } from '@/types/enums';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 type TripControlsProps = {
   attendeeCount: number;
+  tripStatus: TripStatus;
+  onStartTrip: () => void;
+  onEndTrip: () => void;
+  isLoading?: boolean;
 };
 
-const TripControls = ({ attendeeCount }: TripControlsProps) => {
-  const { isTracking, startTracking, stopTracking } = useLocationTracking();
+const TripControls = ({
+  attendeeCount,
+  tripStatus,
+  onStartTrip,
+  onEndTrip,
+  isLoading,
+}: TripControlsProps) => {
+  const isActive = tripStatus === TripStatus.ACTIVE;
 
   return (
     <View style={styles.container}>
@@ -19,12 +29,15 @@ const TripControls = ({ attendeeCount }: TripControlsProps) => {
           <StyledText style={styles.attendeeText}>{attendeeCount} attendees</StyledText>
         </View>
       </View>
-      <StyledButton
-        title={isTracking ? 'Stop Trip' : 'Start Trip'}
-        variant={isTracking ? 'secondary' : 'primary'}
-        icon={isTracking ? 'stop-circle-outline' : 'play-circle-outline'}
-        onPress={isTracking ? stopTracking : startTracking}
-      />
+      {tripStatus !== TripStatus.COMPLETED && (
+        <StyledButton
+          title={isActive ? 'Stop Trip' : 'Start Trip'}
+          variant={isActive ? 'secondary' : 'primary'}
+          icon={isActive ? 'stop-circle-outline' : 'play-circle-outline'}
+          onPress={isActive ? onEndTrip : onStartTrip}
+          loading={isLoading}
+        />
+      )}
     </View>
   );
 };

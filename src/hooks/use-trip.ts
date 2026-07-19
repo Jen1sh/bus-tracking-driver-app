@@ -1,20 +1,24 @@
 import { getErrorMessage } from '@/lib/error';
-import { useMutation } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert } from 'react-native';
-import { endTrip as endTripApi, startTrip as startTripApi } from '../services/trip.service';
+import {
+  endTrip as endTripApi,
+  getNextScheduleAttendees,
+  getNextScheduleSummary,
+  startTrip as startTripApi,
+} from '../services/trip.service';
 import { useLocationTracking } from './useLocationTracking';
 
 const useTrip = () => {
-  const { isTracking, startTracking, stopTracking } = useLocationTracking();
-  const [tripId, setTripId] = useState<number | null>(null);
+  const { startTracking, stopTracking } = useLocationTracking();
+  const queryClient = useQueryClient();
 
   const useStartTrip = () =>
     useMutation({
-      mutationFn: () => startTripApi(1),
+      mutationFn: () => startTripApi(),
       onSuccess: async () => {
-        setTripId(5);
-        await startTracking(true);
+        queryClient.invalidateQueries({ queryKey: ['next-schedule-summary'] });
+        queryClient.invalidateQueries({ queryKey: ['next-schedule-attendees'] });
       },
       onError: err => {
         Alert.alert('Failed to Start Trip', getErrorMessage(err));
@@ -23,17 +27,49 @@ const useTrip = () => {
 
   const useEndTrip = () =>
     useMutation({
-      mutationFn: () => endTripApi(tripId!),
+      mutationFn: () => endTripApi(),
       onSuccess: async () => {
         await stopTracking();
-        setTripId(null);
+        queryClient.invalidateQueries({ queryKey: ['next-schedule-summary'] });
+        queryClient.invalidateQueries({ queryKey: ['next-schedule-attendees'] });
       },
       onError: err => {
         Alert.alert('Failed to End Trip', getErrorMessage(err));
       },
     });
 
-  return { useStartTrip, useEndTrip, tripId, isTracking };
+  const useNextScheduleSummary = () =>
+    useQuery({
+      queryKey: ['next-schedule-summary'],
+      queryFn: async () => {
+        const res = await getNextScheduleSummary();
+        return res.data;
+      },
+    });
+
+  const useNextScheduleAttendees = () =>
+    useQuery({
+      queryKey: ['next-schedule-attendees'],
+      queryFn: async () => {
+        const res = await getNextScheduleAttendees();
+        return res.data;
+      },
+    });
+
+  const refetchAll = () => {
+    queryClient.invalidateQueries({ queryKey: ['next-schedule-summary'] });
+    queryClient.invalidateQueries({ queryKey: ['next-schedule-attendees'] });
+  };
+
+  return {
+    useStartTrip,
+    useEndTrip,
+    useNextScheduleSummary,
+    useNextScheduleAttendees,
+    refetchAll,
+    startTracking,
+    stopTracking,
+  };
 };
 
 export default useTrip;

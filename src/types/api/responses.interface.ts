@@ -1,35 +1,10 @@
-import { AccountStatus, Role, TripStatus } from '../enums';
+import { TripStatus } from '../enums';
 
 export interface APIResponse<T> {
   success: boolean;
   data: T;
   message: string | null;
   error: string | null;
-}
-
-export interface UserSummary {
-  id: number;
-  name: string;
-  email: string;
-  role: Role;
-  schoolId: number | null;
-  status: AccountStatus;
-}
-
-export interface AuthResponse {
-  accessToken: string;
-  refreshToken: string;
-  expiresIn: number;
-  user: UserSummary;
-  message?: string;
-}
-
-export interface RefreshTokenResponse {
-  accessToken: string;
-  refreshToken: string;
-  expiresIn: number;
-  user: UserSummary;
-  message: string | null;
 }
 
 export interface TripResponse {
@@ -41,11 +16,36 @@ export interface TripResponse {
   status: TripStatus;
 }
 
-export interface LocationResponse {
+export interface TripInfo {
+  tripId: number;
+  startTime: string;
+  endTime: string | null;
+  date: string;
+  status: TripStatus;
+}
+
+export interface BusInfo {
   busId: number;
-  latitude: number;
-  longitude: number;
-  speed: number | null;
-  recordedAt: string;
-  tripStatus: TripStatus;
+  plate: string;
+  capacity: number;
+}
+
+export interface RouteInfo {
+  routeId: number;
+  name: string;
+}
+
+export interface NextScheduleSummaryResponse {
+  trip: TripInfo;
+  bus: BusInfo;
+  route: RouteInfo | null;
+}
+
+export interface StudentInfo {
+  id: number;
+  name: string;
+}
+
+export interface NextScheduleAttendeesResponse {
+  students: StudentInfo[];
 }
