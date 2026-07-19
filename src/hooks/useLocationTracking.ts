@@ -1,89 +1,22 @@
-import * as Location from 'expo-location';
-import * as TaskManager from 'expo-task-manager';
-import { Alert, Linking } from 'react-native';
-import { postLocation } from '../services/trip.service';
-
-const TASK_NAME = 'LOCATION_TRACKING_TASK';
-
-TaskManager.defineTask(TASK_NAME, async ({ data, error }) => {
-  if (error) {
-    console.error('Location tracking error:', error);
-    return;
-  }
-
-  if (data) {
-    const { locations } = data as { locations: Location.LocationObject[] };
-
-    console.log(locations);
-
-    for (const loc of locations) {
-      try {
-        await postLocation({
-          latitude: loc.coords.latitude,
-          longitude: loc.coords.longitude,
-          speed: 2,
-        });
-      } catch (err) {
-        console.error('Failed to post location:', err?.response?.data);
-      }
-    }
-  }
-});
+import { useState } from 'react';
 
 export async function requestPermissions() {
-  const foreground = await Location.requestForegroundPermissionsAsync();
-
-  if (foreground.status !== 'granted') {
-    return false;
-  }
-
-  const background = await Location.requestBackgroundPermissionsAsync();
-
-  if (background.status !== 'granted') {
-    return false;
-  }
-
   return true;
 }
 
-export function showPermissionAlert() {
-  Alert.alert(
-    'Location Permission Required',
-    'Please enable location access in Settings to start trip tracking.',
-    [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Settings', onPress: () => Linking.openURL('app-settings:') },
-    ],
-  );
-}
+export function showPermissionAlert() {}
 
 export function useLocationTracking() {
-  const startTracking = async (skipPermissionCheck = false) => {
-    const granted = await requestPermissions();
+  const [isTracking, setIsTracking] = useState(false);
 
-    if (!granted) {
-      showPermissionAlert();
-
-      return false;
-    }
-
-    await Location.startLocationUpdatesAsync(TASK_NAME, {
-      accuracy: Location.Accuracy.High,
-      timeInterval: 5000,
-      distanceInterval: 0,
-      showsBackgroundLocationIndicator: true,
-      foregroundService: {
-        notificationTitle: 'Trip Active',
-        notificationBody: 'Tracking your location for the active trip.',
-      },
-    });
-
+  const startTracking = async (_skipPermissionCheck = false) => {
+    setIsTracking(true);
     return true;
   };
 
   const stopTracking = async () => {
-    await Location.stopLocationUpdatesAsync(TASK_NAME);
+    setIsTracking(false);
   };
 
-  return { startTracking, stopTracking };
+  return { isTracking, startTracking, stopTracking };
 }

@@ -8,6 +8,12 @@ export default function StackLayout() {
         header: () => <ScreenHeader title='Map' />,
       }}>
       <Stack.Screen name='map' />
+      <Stack.Screen
+        name='attendees'
+        options={{
+          header: () => <ScreenHeader title='Attendees' />,
+        }}
+      />
     </Stack>
   );
 }

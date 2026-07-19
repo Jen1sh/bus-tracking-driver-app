@@ -9,7 +9,7 @@ export const palette = {
   disabled: '#bdbdbd',
   error: '#C51E3A',
   success: '#228B22',
-  surface: '#DCDCDC',
+  surface: '#fdfafa',
 
   // Static Colors
   light: '#f7f7f7',
