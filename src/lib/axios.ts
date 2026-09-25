@@ -21,7 +21,8 @@ const getBaseUrl = () => {
 };
 
 const client = axios.create({
-  baseURL: getBaseUrl(),
+  // baseURL: getBaseUrl(),
+  baseURL: 'https://15.252.87.118.sslip.io/api/',
 });
 
 let isRefreshing = false;

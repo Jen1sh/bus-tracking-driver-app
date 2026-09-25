@@ -4,22 +4,22 @@ const isDevVariant = process.env.APP_VARIANT === 'development';
 
 function getApplicatioName() {
   if (isDevVariant) {
-    return 'RN Template (Dev)';
+    return 'Bus Tracking Driver (Dev)';
   }
-  return 'RN Template';
+  return 'Bus Tracking Driver';
 }
 
 function getBundlerIdentifier() {
   if (isDevVariant) {
-    return 'com.wdftech.rnmt.dev';
+    return 'com.snb.bustracking.driver.dev';
   }
-  return 'com.wdftech.rnmt';
+  return 'com.snb.bustracking.driver';
 }
 
 export default (context: ConfigContext): ExpoConfig => ({
   ...context,
   name: getApplicatioName(),
-  slug: 'react-native-managed-template',
+  slug: 'bus-tracking-driver',
   scheme: 'rnmt',
   version: '1.0.0',
   orientation: 'portrait',
@@ -77,5 +77,10 @@ export default (context: ConfigContext): ExpoConfig => ({
   ],
   experiments: {
     typedRoutes: true,
+  },
+  extra: {
+    eas: {
+      projectId: 'a4f589d4-b046-44f1-9233-b144ccc9d446',
+    },
   },
 });
