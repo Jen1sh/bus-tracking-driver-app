@@ -4,34 +4,42 @@ import { StyleSheet } from 'react-native-unistyles';
 import MetricCard from './MetricCard';
 
 type RouteShiftCardProps = {
-  routeName: string;
-  shift: string;
+  /** Null when the bus has no route yet — the card still renders. */
+  routeName: string | null;
+  /** From `direction`, the authoritative run label. Null on a day the bus does not run. */
+  directionLabel: string | null;
   studentCount: number;
   stopCount: number;
-  tripCount: number;
+  /** This bus's runs today — drives the "Run N of M" line. */
+  runCount: number;
+  /** 1-based index of the run this payload describes, or null when the bus is not running today. */
+  currentRunNumber: number | null;
 };
 
 const RouteShiftCard = ({
   routeName,
-  shift,
+  directionLabel,
   studentCount,
   stopCount,
-  tripCount,
-}: RouteShiftCardProps) => {
-  return (
-    <View style={styles.card}>
-      <View style={styles.header}>
-        <StyledText style={styles.routeName}>{routeName}</StyledText>
-        <StyledText style={styles.shift}>{shift}</StyledText>
-      </View>
-      <View style={styles.metricsRow}>
-        <MetricCard icon='people-outline' label='Students' value={studentCount} />
-        <MetricCard icon='location-outline' label='Stops' value={stopCount} />
-        <MetricCard icon='swap-horizontal-outline' label='Trips' value={tripCount} />
-      </View>
+  runCount,
+  currentRunNumber,
+}: RouteShiftCardProps) => (
+  <View style={styles.card}>
+    <View style={styles.header}>
+      <StyledText style={styles.routeName}>{routeName ?? 'No route assigned'}</StyledText>
+      {directionLabel ? <StyledText style={styles.shift}>{directionLabel}</StyledText> : null}
     </View>
-  );
-};
+    <View style={styles.metricsRow}>
+      <MetricCard icon='people-outline' label='Students' value={studentCount} />
+      <MetricCard icon='location-outline' label='Stops' value={stopCount} />
+      <MetricCard
+        icon='swap-horizontal-outline'
+        label='Trips'
+        value={currentRunNumber != null ? `${currentRunNumber} of ${runCount}` : runCount}
+      />
+    </View>
+  </View>
+);
 
 const styles = StyleSheet.create(({ colors, spacings }) => ({
   card: {

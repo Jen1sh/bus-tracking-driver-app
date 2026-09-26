@@ -4,6 +4,7 @@ export const Urls = {
     refreshToken: 'auth/refresh',
   },
   trip: {
+    // Neither takes a request body. `endTrip` takes an optional `tripId` *query* param.
     startTrip: 'trips/start',
     endTrip: 'trips/end',
   },
@@ -11,7 +12,11 @@ export const Urls = {
     updateLocation: 'location/update',
   },
   driver: {
-    nextScheduleSummary: 'driver/next-schedule-summary',
-    nextScheduleAttendees: 'driver/next-schedule-attendees',
+    // The one writing GET: it materialises today's `trips` rows, which `trips/start` requires.
+    assignment: 'driver/assignment',
+    // Read-only. Answers for future dates, so it never creates a row.
+    schedule: 'driver/schedule',
+    currentTrip: 'driver/trip/current',
+    rollSheet: 'driver/trip/current/roll-sheet',
   },
 };

@@ -1,30 +1,36 @@
+import TripControl from '@/components/home/TripControl';
 import MapBottomSheet from '@/components/map/MapBottomSheet';
+import StatCard from '@/components/map/MetricsCard';
 import NextStopCard from '@/components/map/NextStopCard';
 import SosButton from '@/components/map/SosButton';
-import StatCard from '@/components/map/MetricsCard';
 import { StyledText } from '@/components/styled/StyledText';
-import useTrip from '@/hooks/use-trip';
+import useDriver from '@/hooks/use-driver';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import { useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
-import { TouchableOpacity, View } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { ActivityIndicator, TouchableOpacity, View } from 'react-native';
 import MapView from 'react-native-maps';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-const TRIP_STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  PENDING: { label: 'Pending', color: '#bdbdbd' },
-  ACTIVE: { label: 'Active', color: '#228B22' },
-  COMPLETED: { label: 'Completed', color: '#02384A' },
+const FALLBACK_REGION = {
+  latitude: 27.7172,
+  longitude: 85.324,
+  latitudeDelta: 0.0922,
+  longitudeDelta: 0.0421,
 };
 
 const MapScreen = () => {
   const sheetRef = useRef<TrueSheet>(null);
-  const { useNextScheduleSummary } = useTrip();
-  const { data: summary } = useNextScheduleSummary();
-  const { theme } = useUnistyles();
-  const { colors } = theme;
+  const { useAssignment, useCurrentTrip, useSchedule } = useDriver();
+  const { data: assignment, isLoading } = useAssignment();
+  const { data: trip } = useCurrentTrip();
+  // Only used to word the button's empty state. Already cached by Home and the Schedule tab, so this
+  // normally costs no extra request.
+  const { data: schedule } = useSchedule();
+  const {
+    theme: { colors },
+  } = useUnistyles();
   const router = useRouter();
-  const [isTripStarted, setIsTripStarted] = useState(false);
 
   useEffect(() => {
     if (sheetRef.current) {
@@ -32,36 +38,51 @@ const MapScreen = () => {
     }
   }, []);
 
-  if (!summary) return null;
+  // `lastLocation` is scoped to the current trip and is for rehydration only — it is the bus's last
+  // reported position, not a live feed. The live speed and position come from the phone's own GPS.
+  const lastLocation = trip?.lastLocation;
+  const region = lastLocation
+    ? {
+        latitude: lastLocation.latitude,
+        longitude: lastLocation.longitude,
+        latitudeDelta: FALLBACK_REGION.latitudeDelta,
+        longitudeDelta: FALLBACK_REGION.longitudeDelta,
+      }
+    : FALLBACK_REGION;
 
-  const route = summary.route;
-  const statusInfo = TRIP_STATUS_LABELS[summary.trip.status] ?? TRIP_STATUS_LABELS.PENDING;
+  if (isLoading || !assignment) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size='large' color={colors.primary} />
+      </View>
+    );
+  }
+
+  const routeName = trip?.routeName ?? assignment.routeName;
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={styles.container}>
       <View style={[styles.badgeRow, { backgroundColor: colors.background }]}>
-        <View style={[styles.badge, { backgroundColor: statusInfo.color + '20' }]}>
-          <View style={[styles.badgeDot, { backgroundColor: statusInfo.color }]} />
-          <StyledText style={[styles.badgeText, { color: statusInfo.color }]}>
-            {statusInfo.label}
+        <View style={[styles.badge, { backgroundColor: colors.success + '20' }]}>
+          <View style={[styles.badgeDot, { backgroundColor: colors.success }]} />
+          <StyledText style={[styles.badgeText, { color: colors.success }]}>
+            {trip ? 'In progress' : assignment.tripId ? 'Not started' : 'No run today'}
           </StyledText>
         </View>
-        <View style={[styles.badge, { backgroundColor: colors.primaryTint + '20' }]}>
-          <StyledText style={[styles.badgeText, { color: colors.primaryTint }]}>
-            {route.name}
-          </StyledText>
-        </View>
+        {routeName ? (
+          <View style={[styles.badge, { backgroundColor: colors.primaryTint + '20' }]}>
+            <StyledText style={[styles.badgeText, { color: colors.primaryTint }]}>
+              {routeName}
+            </StyledText>
+          </View>
+        ) : null}
       </View>
 
       <MapView
-        style={{ flex: 1 }}
-        initialRegion={{
-          latitude: 37.78825,
-          longitude: -122.4324,
-          latitudeDelta: 0.0922,
-          longitudeDelta: 0.0421,
-        }}
+        style={styles.map}
+        initialRegion={region}
         onPanDrag={() => sheetRef.current?.dismiss()}
+        showsUserLocation
       />
 
       <TouchableOpacity
@@ -73,11 +94,24 @@ const MapScreen = () => {
 
       <MapBottomSheet ref={sheetRef}>
         <View style={styles.statsRow}>
-          <StatCard icon='speedometer-outline' value={42} unit='km/h' />
-          <StatCard icon='people-outline' value={18} unit='on board' />
+          {/* Speed comes from the device's own GPS while driving; the server has no live feed to read. */}
+          <StatCard
+            icon='speedometer-outline'
+            value={lastLocation?.speed != null ? Math.round(lastLocation.speed) : '--'}
+            unit='km/h'
+          />
+          <StatCard icon='people-outline' value={trip?.onBoard ?? 0} unit='on board' />
         </View>
 
-        <NextStopCard stopName='Main Street Station' eta='5 min' address='123 Main St, Downtown' />
+        <NextStopCard
+          stopName={trip?.nextStop.label ?? 'Awaiting route'}
+          eta={trip?.nextStop.etaMinutes != null ? `${trip.nextStop.etaMinutes} min` : '--'}
+          address={
+            trip?.nextStop.stopId != null
+              ? 'Next checkpoint on this route'
+              : 'Heading to the school'
+          }
+        />
 
         <TouchableOpacity
           style={[styles.viewAllBtn, { borderColor: colors.border }]}
@@ -91,14 +125,9 @@ const MapScreen = () => {
           </StyledText>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.actionBtn, isTripStarted ? styles.stopBtn : styles.startBtn]}
-          onPress={() => setIsTripStarted(!isTripStarted)}
-          activeOpacity={0.7}>
-          <StyledText style={styles.btnLabel}>
-            {isTripStarted ? 'End Trip' : 'Start Trip'}
-          </StyledText>
-        </TouchableOpacity>
+        {/* The same control as Home, driven by the same server payload — a second local copy here
+            would drift out of sync with the dashboard and offer a Start on a running trip. */}
+        <TripControl assignment={assignment} hasUpcomingRun={schedule?.next != null} />
 
         <SosButton />
       </MapBottomSheet>
@@ -107,6 +136,12 @@ const MapScreen = () => {
 };
 
 const styles = StyleSheet.create(({ colors, spacings }) => ({
+  container: {
+    flex: 1,
+  },
+  map: {
+    flex: 1,
+  },
   badgeRow: {
     flexDirection: 'row',
     paddingHorizontal: spacings.md,
@@ -155,22 +190,6 @@ const styles = StyleSheet.create(({ colors, spacings }) => ({
   statsRow: {
     flexDirection: 'row',
     gap: 12,
-  },
-  actionBtn: {
-    alignItems: 'center',
-    paddingVertical: 14,
-    borderRadius: 12,
-  },
-  startBtn: {
-    backgroundColor: colors.primary,
-  },
-  stopBtn: {
-    backgroundColor: colors.secondary,
-  },
-  btnLabel: {
-    fontSize: 15,
-    fontFamily: 'RubikSemiBold',
-    color: colors.light,
   },
   viewAllBtn: {
     alignItems: 'center',

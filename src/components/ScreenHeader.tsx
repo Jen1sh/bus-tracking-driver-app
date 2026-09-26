@@ -15,7 +15,10 @@ const UniIcon = withUnistyles(Ionicons, ({ colors, fonts, spacings }) => ({ colo
 
 const ScreenHeader = ({ title, onBack, theme }: ScreenHeaderProps & { theme: any }) => {
   const router = useRouter();
-  const icon = Platform.select({ ios: 'chevron-back', default: 'arrow-back' });
+  const icon = (Platform.select({
+    ios: 'chevron-back',
+    default: 'arrow-back',
+  }) ?? 'arrow-back') as keyof typeof Ionicons.glyphMap;
 
   const insets = useSafeAreaInsets();
 

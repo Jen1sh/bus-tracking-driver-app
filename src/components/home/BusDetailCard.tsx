@@ -6,11 +6,13 @@ import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 type BusDetailCardProps = {
-  plate: string;
-  capacity: number;
+  displayId: string | null;
+  plate: string | null;
+  /** The roster size. There is no `capacity` on the driver's payload — this is the count that matters. */
+  studentCount: number;
 };
 
-const BusDetailCard = ({ plate, capacity }: BusDetailCardProps) => {
+const BusDetailCard = ({ displayId, plate, studentCount }: BusDetailCardProps) => {
   const router = useRouter();
 
   return (
@@ -18,8 +20,11 @@ const BusDetailCard = ({ plate, capacity }: BusDetailCardProps) => {
       <View style={styles.topRow}>
         <Ionicons name='bus-outline' size={20} color={styles.icon.color} />
         <View style={styles.info}>
-          <StyledText style={styles.plate}>{plate}</StyledText>
-          <StyledText style={styles.capacity}>Capacity: {capacity}</StyledText>
+          <StyledText style={styles.plate}>{plate ?? displayId ?? 'Unassigned'}</StyledText>
+          <StyledText style={styles.capacity}>
+            {displayId ? `${displayId} · ` : ''}
+            {studentCount} on roster
+          </StyledText>
         </View>
       </View>
       <StyledButton

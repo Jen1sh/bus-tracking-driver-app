@@ -23,6 +23,22 @@ const ProtectedLayout = () => {
       />
 
       <Tabs.Screen
+        name='schedule'
+        options={{
+          tabBarLabel: 'Schedule',
+          tabBarIcon({ color, focused, size }) {
+            return (
+              <Ionicons
+                name={focused ? 'calendar' : 'calendar-outline'}
+                color={color}
+                size={size}
+              />
+            );
+          },
+        }}
+      />
+
+      <Tabs.Screen
         name='profile'
         options={{
           tabBarLabel: 'Profile',

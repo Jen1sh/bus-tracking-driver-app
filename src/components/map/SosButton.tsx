@@ -48,9 +48,13 @@ const SosButton = () => {
       progress.value = withTiming(0, { duration: 200 });
     });
 
+  // This reanimated build types `interpolate` as number-only, so the percentage is assembled in the
+  // worklet instead. A percentage width is what makes the bar grow from its left edge; animating a
+  // fixed pixel width would be wrong on every screen but this one.
   const progressStyle = useAnimatedStyle(() => {
-    const width = interpolate(progress.value, [0, 1], ['0%', '100%']);
-    return { width };
+    const percent = interpolate(progress.value, [0, 1], [0, 100]);
+
+    return { width: `${percent}%` };
   });
 
   return (

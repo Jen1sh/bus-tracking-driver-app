@@ -1,6 +1,7 @@
 import { StorageKeys } from '@/constants/storage-keys';
 import { SecureStore } from '@/lib/secure-store';
 import { setLogoutCallback } from '@/lib/axios';
+import { setDriverQueryLogout } from '@/lib/query-error-handler';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   useCallback,
@@ -50,9 +51,13 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     if (token) setToken(token);
 
     setLogoutCallback(logOut);
+    // The QueryClient is built above this provider, so query errors reach the same sign-out path
+    // through a module-level registration rather than through context.
+    setDriverQueryLogout(logOut);
 
     return () => {
       setLogoutCallback(() => {});
+      setDriverQueryLogout(null);
     };
   }, [logOut]);
 

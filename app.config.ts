@@ -37,6 +37,10 @@ export default (context: ConfigContext): ExpoConfig => ({
     },
   },
   plugins: [
+    // Must stay first: it has to write android/local.properties before anything reads the SDK path.
+    // Referenced by path rather than imported — ExpoConfig.plugins only accepts string plugin
+    // specifiers, and passing the function directly type-errors *and* silently does nothing.
+    './plugins/with-android-sdk-location',
     'expo-font',
     'expo-router',
     'expo-secure-store',

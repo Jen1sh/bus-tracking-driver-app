@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { StyledText } from '@/components/styled/StyledText';
 import { useMemo, useState } from 'react';
-import { ScrollView, TouchableOpacity, View } from 'react-native';
+import { ScrollView, TextStyle, TouchableOpacity, View, ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 type StudentStatus = 'picked' | 'dropped' | 'absent';
@@ -57,15 +57,8 @@ const RollSheetCard = ({ students, maxHeight = 260 }: RollSheetCardProps) => {
       <StyledText style={styles.heading}>Roll Sheet</StyledText>
 
       <View style={styles.tilesRow}>
-        {(['picked', 'dropped', 'absent'] as StudentStatus[]).map(status => (
-          <View
-            key={status}
-            style={[
-              styles.tile,
-              styles[
-                `tile${status.charAt(0).toUpperCase() + status.slice(1)}` as keyof typeof styles
-              ],
-            ]}>
+        {STATUS_ORDER.map(status => (
+          <View key={status} style={[styles.tile, TILE_STYLES[status]]}>
             <StyledText style={styles.tileValue}>{counts[status]}</StyledText>
             <StyledText style={styles.tileLabel}>{STATUS_LABELS[status]}</StyledText>
           </View>
@@ -75,10 +68,6 @@ const RollSheetCard = ({ students, maxHeight = 260 }: RollSheetCardProps) => {
       <ScrollView style={[styles.list, { maxHeight }]} nestedScrollEnabled>
         {students.map(student => {
           const status = statusMap[student.id];
-          const colorKey = (status.charAt(0).toUpperCase() + status.slice(1)) as
-            | 'Picked'
-            | 'Dropped'
-            | 'Absent';
           return (
             <TouchableOpacity
               key={student.id}
@@ -89,9 +78,8 @@ const RollSheetCard = ({ students, maxHeight = 260 }: RollSheetCardProps) => {
                 <Ionicons name='person-outline' size={16} color={styles.avatarIcon.color} />
               </View>
               <StyledText style={styles.rowName}>{student.name}</StyledText>
-              <View style={[styles.statusBadge, styles[`badge${colorKey}` as keyof typeof styles]]}>
-                <StyledText
-                  style={[styles.statusText, styles[`text${colorKey}` as keyof typeof styles]]}>
+              <View style={[styles.statusBadge, BADGE_STYLES[status]]}>
+                <StyledText style={[styles.statusText, STATUS_TEXT_STYLES[status]]}>
                   {STATUS_LABELS[status]}
                 </StyledText>
               </View>
@@ -202,5 +190,25 @@ const styles = StyleSheet.create(({ colors, spacings }) => ({
     color: colors.placeholderText,
   },
 }));
+
+// Indexed by status rather than by a computed style key: `styles[key as keyof typeof styles]` widens to
+// the union of every style value in the sheet, which is not assignable to ViewStyle/TextStyle.
+const TILE_STYLES: Record<StudentStatus, ViewStyle> = {
+  picked: styles.tilePicked,
+  dropped: styles.tileDropped,
+  absent: styles.tileAbsent,
+};
+
+const BADGE_STYLES: Record<StudentStatus, ViewStyle> = {
+  picked: styles.badgePicked,
+  dropped: styles.badgeDropped,
+  absent: styles.badgeAbsent,
+};
+
+const STATUS_TEXT_STYLES: Record<StudentStatus, TextStyle> = {
+  picked: styles.textPicked,
+  dropped: styles.textDropped,
+  absent: styles.textAbsent,
+};
 
 export default RollSheetCard;
