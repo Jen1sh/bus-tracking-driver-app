@@ -2,6 +2,11 @@ import { FONTS } from '@/assets/fonts';
 import StyledToastManager from '@/components/styled/StyledToastManager';
 import { AuthProvider, useAuthContext } from '@/contexts/auth.context';
 import useNavigationTheme from '@/hooks/useNavigationTheme';
+// Imported above the providers, and for its side effect as much as its export: this module calls
+// `TaskManager.defineTask` at scope, which the OS needs to have run before it can deliver a background
+// location fix. Reaching it through a React import chain that a killed app never evaluates leaves a
+// stream registered against a task body that does not exist.
+import { requestLocationPermission } from '@/lib/location';
 import { handleDriverQueryError } from '@/lib/query-error-handler';
 import { QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
@@ -77,6 +82,15 @@ export default function RootLayout() {
 function RootLayoutNav() {
   const theme = useNavigationTheme();
   const { token } = useAuthContext();
+
+  // Ask as soon as there is a session, which covers signing in *and* every relaunch of an app that
+  // already had a token. Repeating it is harmless by design: the OS prompts only the first time, and
+  // afterwards the call just resolves to the standing decision.
+  useEffect(() => {
+    if (token) {
+      void requestLocationPermission();
+    }
+  }, [token]);
 
   return (
     <ThemeProvider value={theme}>

@@ -1,9 +1,15 @@
+import useLocationTracking from '@/hooks/use-location-tracking';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Tabs } from 'expo-router';
 import { useUnistyles } from 'react-native-unistyles';
 
 const ProtectedLayout = () => {
   const { theme } = useUnistyles();
+
+  // Mounted here rather than on a screen so it lives for the whole authenticated session. On Home it
+  // would stop the moment the driver switched tabs, and the stream would be torn down and rebuilt
+  // every time they came back.
+  useLocationTracking();
 
   return (
     <Tabs

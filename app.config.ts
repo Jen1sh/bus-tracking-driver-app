@@ -35,6 +35,12 @@ export default (context: ConfigContext): ExpoConfig => ({
       foregroundImage: './assets/icons/adaptive-icon.png',
       backgroundColor: '#ffffff',
     },
+    // expo-location adds the location and foreground-service permissions but not this one, so Android
+    // 13+ silently refuses to display the foreground-service notification the tracking stream depends
+    // on. The practical effect is that a driver gets no indication their location is being shared — and
+    // on some OEM builds the service is reclaimed when its notification cannot be shown. Declaring it is
+    // enough: the system raises its own prompt the first time the service posts to its channel.
+    permissions: ['android.permission.POST_NOTIFICATIONS'],
   },
   plugins: [
     // Must stay first: it has to write android/local.properties before anything reads the SDK path.
@@ -73,9 +79,18 @@ export default (context: ConfigContext): ExpoConfig => ({
     [
       'expo-location',
       {
-        locationAlwaysAndWhenInUsePermission: 'Allow $(PRODUCT_NAME) to use your location.',
+        // Both prompts get real copy. Only the "Always" string was set before, so iOS fell back to
+        // Expo's generic "Allow $(PRODUCT_NAME) to access your location" for the when-in-use prompt —
+        // and that is the one the driver actually sees first.
+        locationWhenInUsePermission:
+          'Allow $(PRODUCT_NAME) to use your location to share your bus position with the school.',
+        locationAlwaysAndWhenInUsePermission:
+          'Allow $(PRODUCT_NAME) to use your location in the background, so the school can follow the bus while the app is closed.',
         isIosBackgroundLocationEnabled: true,
         isAndroidBackgroundLocationEnabled: true,
+        // Defaults to isAndroidBackgroundLocationEnabled, but stated so the foreground-service
+        // permissions the notification depends on are not lost if background is ever turned off.
+        isAndroidForegroundServiceEnabled: true,
       },
     ],
   ],
