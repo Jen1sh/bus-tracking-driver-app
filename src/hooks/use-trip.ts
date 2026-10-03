@@ -47,10 +47,18 @@ const useTrip = () => {
           throw err;
         }
       },
-      onSuccess: () => {
-        // The dashboard advances to the run in progress and the roll sheet's editable flag flips, so
-        // the whole driver-facing set has to be re-read rather than patched.
-        void queryClient.invalidateQueries({ queryKey: driverKeys.all });
+      onSuccess: async () => {
+        // Awaited rather than fired and forgotten, because the trip's new status is spread across four
+        // queries and they have to move together: the dashboard's `onDuty`/`canStartTrip`, the
+        // schedule's run status, the roll sheet's `editable` flag, and the current-trip row the location
+        // task keys off. `driverKeys.all` is the prefix all four live under, so this is what re-reads
+        // the schedule without naming it here and letting the prefix rot.
+        //
+        // Awaiting keeps `isPending` true until they have, which closes a real window: the button would
+        // otherwise flip out of "Starting" while still reading "Start Trip", and a second tap in that
+        // gap 400s on a row that is already ACTIVE. Refetches settle rather than reject, so a failed
+        // re-read shows as a stale screen instead of being reported as a failed start.
+        await queryClient.invalidateQueries({ queryKey: driverKeys.all });
       },
       onError: err => {
         // canStartTrip was stale — refetch so the button reflects the real blocker.
@@ -74,8 +82,13 @@ const useTrip = () => {
 
     return useMutation({
       mutationFn: (tripId?: number) => endTrip(tripId),
-      onSuccess: () => {
-        void queryClient.invalidateQueries({ queryKey: driverKeys.all });
+      onSuccess: async () => {
+        // The same re-read as start, and for a sharper reason. `currentTrip` is what
+        // `useLocationTracking` derives `shouldTrack` from, so until it resolves the native stream is
+        // still registered against a trip that no longer exists — the bus would keep posting positions
+        // for a run the server has already closed. Awaiting bounds that to the round trip and no longer,
+        // and it is also what lets the End button's pending state actually mean "the trip is closed".
+        await queryClient.invalidateQueries({ queryKey: driverKeys.all });
       },
       onError: err => {
         if (getErrorCode(err) === 'AMBIGUOUS_ACTIVE_TRIP') {

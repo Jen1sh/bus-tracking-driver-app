@@ -93,6 +93,8 @@ export default (context: ConfigContext): ExpoConfig => ({
         isAndroidForegroundServiceEnabled: true,
       },
     ],
+    "expo-background-task",
+    "expo-status-bar"
   ],
   experiments: {
     typedRoutes: true,

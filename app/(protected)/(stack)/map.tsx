@@ -79,6 +79,7 @@ const MapScreen = () => {
       </View>
 
       <MapView
+        userInterfaceStyle='dark'
         style={styles.map}
         initialRegion={region}
         onPanDrag={() => sheetRef.current?.dismiss()}

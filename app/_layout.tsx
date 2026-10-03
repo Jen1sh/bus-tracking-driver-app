@@ -2,24 +2,74 @@ import { FONTS } from '@/assets/fonts';
 import StyledToastManager from '@/components/styled/StyledToastManager';
 import { AuthProvider, useAuthContext } from '@/contexts/auth.context';
 import useNavigationTheme from '@/hooks/useNavigationTheme';
-// Imported above the providers, and for its side effect as much as its export: this module calls
-// `TaskManager.defineTask` at scope, which the OS needs to have run before it can deliver a background
-// location fix. Reaching it through a React import chain that a killed app never evaluates leaves a
-// stream registered against a task body that does not exist.
-import { requestLocationPermission } from '@/lib/location';
+import { LOCATION_TASK, requestLocationPermission } from '@/lib/location';
 import { handleDriverQueryError } from '@/lib/query-error-handler';
+import { postLocation } from '@/services/trip.service';
 import { QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
+import { LocationObject } from 'expo-location';
 import { Stack } from 'expo-router';
 import { ThemeProvider } from 'expo-router/react-navigation';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
+import * as TaskManager from 'expo-task-manager';
 import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 export { ErrorBoundary } from 'expo-router';
+
+type LocationTaskData = { locations: LocationObject[] };
+
+/**
+ * The background half of tracking: a native callback that runs whether or not the app is on screen.
+ *
+ * Registered here, at the entry point, rather than beside `startLocationTracking` in `@/lib/location`.
+ * The OS hands a fix to a task by waking a JS context that evaluates the app's main bundle — on Android
+ * via `HeadlessJsTaskContext.startTask`, whose own task body is an empty `async () => {}` that only
+ * keeps timers alive. Everything this registry contains is populated as a side effect of evaluating
+ * that bundle, so a task body defined in a module nothing reaches at startup is simply absent when the
+ * OS calls it, and the symptom is silence with no error anywhere.
+ *
+ * This reports; it does not decide. Starting and stopping live in `@/lib/location`, so there is still
+ * only one place that owns the stream's lifecycle.
+ */
+TaskManager.defineTask<LocationTaskData>(LOCATION_TASK, async ({ data, error }) => {
+  if (error || !data?.locations?.length) {
+    if (error) {
+      console.warn('[location] task error', error);
+    }
+
+    return;
+  }
+
+  // Only the newest fix. Posting the whole batch means a burst of N rows and N WebSocket broadcasts for
+  // samples that are all stale by the time they land — and the parent's trail is a line, not an audit log.
+  const fix = data.locations[data.locations.length - 1];
+
+  console.log('[location] task fix', {
+    latitude: fix.coords.latitude,
+    longitude: fix.coords.longitude,
+    speed: fix.coords.speed,
+    accuracy: fix.coords.accuracy,
+    timestamp: new Date(fix.timestamp).toISOString(),
+  });
+
+  try {
+    await postLocation({
+      latitude: fix.coords.latitude,
+      longitude: fix.coords.longitude,
+      // Metres per second. Null when the platform could not derive it, which the server accepts.
+      speed: fix.coords.speed ?? undefined,
+    });
+  } catch (err) {
+    // Logged rather than swallowed. The earlier version discarded anything non-fatal with no output,
+    // which made "the OS stopped delivering fixes" and "every POST is being rejected" indistinguishable
+    // from the outside.
+    console.warn('[location] post failed', err);
+  }
+});
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();

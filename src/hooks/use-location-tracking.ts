@@ -69,7 +69,6 @@ const useLocationTracking = () => {
       return;
     }
 
-
     void (shouldTrack ? startLocationTracking() : stopLocationTracking()).catch(err => {
       console.warn('[location] could not change tracking state', err);
     });

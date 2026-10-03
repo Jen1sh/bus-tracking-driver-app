@@ -1,34 +1,45 @@
-import { postLocation } from '@/services/trip.service';
 import * as Location from 'expo-location';
-import { LocationObject } from 'expo-location';
-import * as TaskManager from 'expo-task-manager';
 import { Alert, Linking } from 'react-native';
 
 /**
- * The name the native side registers the stream under, and the body it runs.
+ * The name the native side registers the stream under.
  *
  * Must stay byte-identical across releases. Renaming it orphans a stream already registered on a
  * driver's device, and nothing would ever stop it.
  *
- * Imported for its side effect from the root layout: the headless context has to have run this
- * `defineTask` before the OS can deliver a fix, and a killed app never evaluates the React import chain
- * that reaches it.
+ * This module owns the stream's *lifecycle* — when to start, when to stop, and what to ask the driver
+ * for. The task body that receives fixes is registered in `app/_layout.tsx`, next to the entry point the
+ * OS evaluates to wake a killed app, so the two halves stay in step by sharing only this name.
  */
 export const LOCATION_TASK = 'bus-tracking-driver-location';
 
 /**
- * How often a fix is reported, and how far the bus must move for one to be worth sending.
+ * How often a fix is reported.
  *
- * Whichever comes first wins. The distance leg stops a bus idling at a stop from reporting on a timer
- * for nothing; the time leg keeps the parent's map moving on a road where the bus is technically
- * stationary.
+ * `distanceInterval: 0` is load-bearing and must be explicit. Android turns these into a fused-provider
+ * `LocationRequest` (`LocationHelpers.prepareLocationRequest`), and `setMinUpdateDistanceMeters(distance)`
+ * is a *trigger* condition rather than a filter applied afterwards — so any distance the bus has to cross
+ * means silence whenever it isn't moving. Omitting the option does not disable that: it falls back to a
+ * per-accuracy default, and that default is never zero. Setting it explicitly to zero is the only way to
+ * let the interval drive delivery on its own.
  *
- * Tuned tight for testing. At 2.5s this is ~1440 rows an hour against the server; 15s / 100m is the
- * production cadence.
+ * `Accuracy.High` rather than `Balanced`, and the reason is narrow enough to be worth writing down.
+ * `Balanced` becomes `PRIORITY_BALANCED_POWER_ACCURACY`, which the **network** provider answers — cell
+ * and Wi-Fi positioning. An emulator has neither, so the request has no provider able to satisfy it and
+ * simply starves, while a real handset is fine. The failure is deceptive rather than obvious: Google
+ * Maps' own `showsUserLocation` registers a separate *GPS-backed* request, which does acquire fixes, and
+ * the fused provider then fans each one out to every registered client — including this task. So
+ * opening the map appears to switch tracking on, when what it really does is supply the fix source this
+ * request was starving for. `High` is GPS-backed, needs no such rescue, and is the accuracy a bus
+ * position actually wants.
+ *
+ * The interval alone bounds volume, which is the driver's whole share of the `location_logs` and
+ * WebSocket cost. Tuned tight for testing; 15s is the production cadence.
  */
 const OPTIONS: Location.LocationTaskOptions = {
-  accuracy: Location.Accuracy.Balanced,
-  timeInterval: 10000,
+  accuracy: Location.Accuracy.High,
+  showsBackgroundLocationIndicator: true,
+  timeInterval: 3000,
   distanceInterval: 0,
   // Android runs this as a foreground service and needs a notification to stay alive. iOS ignores it and
   // shows its own background-location indicator instead.
@@ -38,45 +49,33 @@ const OPTIONS: Location.LocationTaskOptions = {
   },
 };
 
-type LocationTaskData = { locations: LocationObject[] };
-
 /**
- * How old a fix may be and still be worth sending.
+ * Begins reporting positions, applying the current options every time.
  *
- * Android buffers positions while the app is backgrounded and hands over the whole batch on resume, so
- * a fix can arrive long after the bus was actually there. The server records each one as the bus's
- * *current* position with a fresh timestamp, so posting a stale fix makes the parent's map jump backwards
- * to a place the bus left hours ago. Filtering by age keeps the map pointing at where the bus is now.
+ * Deliberately *not* guarded by `hasStartedLocationUpdatesAsync`, even though that reads like the safe
+ * thing to do. It is what made a change to `OPTIONS` impossible to apply: the guard turned a call on an
+ * already-registered task into a no-op, and because the task registration is persisted natively, that
+ * no-op survived every reload. So the options stayed frozen at whatever they were the first time the
+ * task registered, and no amount of editing them moved anything — the edit was never delivered.
  *
- * Generous on purpose — a fix from two minutes ago says nothing useful about a bus that is moving.
- */
-
-/**
- * Begins reporting positions. Safe to call when already running.
- *
- * The `hasStarted` guard is what makes this safe: `startLocationUpdatesAsync` throws if the stream is
- * already registered, so without it every redundant call from a re-render or a repeat effect would be a
- * crash.
+ * Re-registering is the supported path, not a hazard. `TaskService.registerTask` handles an existing
+ * task by handing it the new options, and `LocationTaskConsumer.setOptions` answers that with a clean
+ * `stopLocationUpdates()` then `startLocationUpdates()` — same request, current config, no throw.
  */
 export const startLocationTracking = async () => {
-
-
-  if (await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK)) {
-
-    return;
-  }
-
-
   await Location.startLocationUpdatesAsync(LOCATION_TASK, OPTIONS);
 };
 
-/** Stops reporting. Safe to call when already stopped, which is the common case on teardown. */
+/**
+ * Stops reporting.
+ *
+ * Guarded, unlike its counterpart above: `unregisterTask` throws `TaskNotFoundException` when the task
+ * isn't there, and tearing the stream down on mount-and-unmount cycles makes that the common case.
+ */
 export const stopLocationTracking = async () => {
-  if (!(await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK))) {
-    return;
+  if (await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK)) {
+    await Location.stopLocationUpdatesAsync(LOCATION_TASK);
   }
-
-  await Location.stopLocationUpdatesAsync(LOCATION_TASK);
 };
 
 /**
@@ -149,41 +148,3 @@ const warnAboutLocation = () => {
     ],
   );
 };
-
-/**
- * The background half of tracking: a native callback that runs whether or not the app is on screen.
- *
- * This reports; it does not decide. Starting and stopping belong to the two functions above, so there is
- * only one place that owns the stream's lifecycle and no ordering to get wrong between two callers.
- */
-TaskManager.defineTask<LocationTaskData>(LOCATION_TASK, async ({ data, error }) => {
-  if (error || !data?.locations?.length) {
-    if (error) {
-      console.warn('[location] task error', error);
-    }
-
-    return;
-  }
-
-
-  // Only the newest fix. Posting the whole batch means a burst of N rows and N WebSocket broadcasts for
-  // samples that are all stale by the time they land — and the parent's trail is a line, not an audit log.
-  const fix = data.locations[data.locations.length - 1];
-
-
-
-
-  try {
-    await postLocation({
-      latitude: fix.coords.latitude,
-      longitude: fix.coords.longitude,
-      // Metres per second. Null when the platform could not derive it, which the server accepts.
-      speed: fix.coords.speed ?? undefined,
-    });
-  } catch (err) {
-    // Logged rather than swallowed. The earlier version discarded anything non-fatal with no output,
-    // which made "the OS stopped delivering fixes" and "every POST is being rejected" indistinguishable
-    // from the outside.
-    console.warn('[location] post failed', err);
-  }
-});
